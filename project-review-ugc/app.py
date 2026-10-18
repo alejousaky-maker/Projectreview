@@ -18,7 +18,12 @@ async def lifespan(app):
         job=json.loads(path.read_text())
         if job['status'] in ('queued','running'):
             job.update(status='failed',stage='interrupted',error={'code':'interrupted','message':'Server restarted; please submit again.'});save(job)
-    yield
+    from runpod_manager import manager
+    manager.start_monitor()
+    try:
+        yield
+    finally:
+        manager.close()
 app=FastAPI(title='Project Review UGC',lifespan=lifespan)
 
 class GenerationRequest(BaseModel):
@@ -37,6 +42,8 @@ class GenerationRequest(BaseModel):
     captions: bool=False
     dry_run: bool=False
     music: str | None=None
+    voice_provider: Literal['elevenlabs','reference','espeak']='elevenlabs'
+    gpu_mode: Literal['manual','auto']='manual'
 
 @app.get('/',response_class=HTMLResponse)
 def index(): return (ROOT/'web.html').read_text()
@@ -65,3 +72,32 @@ def video(job_id:str):
     state=job(job_id);path=OUTPUTS/job_id/'final.mp4'
     if state['status']!='completed' or not path.is_file():raise HTTPException(404,'No completed video')
     return FileResponse(path,media_type='video/mp4')
+
+@app.get('/personas')
+def personas():
+    from personas import list_personas
+    return {'personas':list_personas()}
+
+@app.post('/gpu/test')
+def test_gpu():
+    from remote_client import worker_health
+    return worker_health()
+
+@app.get('/gpu/status')
+def gpu_status():
+    from runpod_manager import manager
+    return manager.snapshot()
+
+@app.get('/setup',response_class=HTMLResponse)
+def setup_page():return (ROOT/'setup.html').read_text()
+
+@app.get('/setup/status')
+def setup_status():
+    from remote_client import worker_health
+    from voice import configured
+    from runpod_manager import manager
+    return {'github_code':'ready','runpod_url_configured':bool(os.getenv('UGC_REMOTE_API_URL')),
+      'runpod_api_key_configured':bool(os.getenv('RUNPOD_API_KEY')),
+      'worker_key_configured':bool(os.getenv('UGC_REMOTE_API_KEY')),
+      'elevenlabs_configured':configured(),'personas':personas()['personas'],
+      'remote_worker':worker_health(),'gpu_lifecycle':manager.snapshot()}

@@ -7,3 +7,5 @@ jobs/*
 !outputs/.gitkeep
 !jobs/.gitkeep
 personas/*/reference.*
+.worker-deps/
+.worker-deps.pending-*/

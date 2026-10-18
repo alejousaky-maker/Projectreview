@@ -10,7 +10,7 @@ from editor import edit
 
 def command(request, output):
     cmd=[os.getenv('UGC_ML_ENV_PYTHON',sys.executable),str(UPSTREAM/'examples/run_persona_example.py'),
-      '--persona-dir',str(ROOT/'personas'/request['persona']),'--scripts',str(output/'scripts.json'),
+      '--persona-dir',str(Path(request.get('_persona_dir',ROOT/'personas'/request['persona']))),'--scripts',str(output/'scripts.json'),
       '--best-of',str(request['best_of']),'--frames',str(request['frames']),
       '--gpu',str(request['gpu']),'--output',str(output/'upstream')]
     return cmd
@@ -22,6 +22,17 @@ def generate(request, output, segments):
     if status['missing']: raise SetupRequired('Persona incomplete: '+', '.join(status['missing']))
     missing=report()['missing_generation_assets']
     if missing: raise SetupRequired('Missing model assets or external repositories: '+', '.join(missing))
+    from readiness import worker_status
+    readiness=worker_status()
+    if readiness['missing']:raise SetupRequired('GPU worker prerequisites missing: '+', '.join(readiness['missing']), 'worker_incomplete')
+    if request.get('_voice_path'):
+        import shutil
+        private_persona=output/'persona';private_persona.mkdir(exist_ok=True)
+        original=ROOT/'personas'/request['persona']
+        for name in ('persona.json','scene_bible.json','reference.jpg'):
+            shutil.copyfile(original/name,private_persona/name)
+        shutil.copyfile(request['_voice_path'],private_persona/'reference.wav')
+        request=dict(request,_persona_dir=str(private_persona))
     env=os.environ.copy();env['UGC_RESULTS_DIR']=str(output/'candidates')
     for name in ('UGC_VIDEO_GPU','UGC_VIDEO_GPU_2','UGC_EVAL_GPU','UGC_TTS_GPU'):
         env[name]=str(request['gpu'])

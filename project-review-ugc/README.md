@@ -18,7 +18,7 @@ Choose **Preview script only** to test without a GPU. Dry runs have status `dry_
 
 Copy `.env.example` to `.env` and edit it locally. Never commit secrets. The optional LLM URL must be the full OpenAI-compatible chat-completions endpoint; set its model and key. Invalid/unavailable LLM responses fall back to deterministic copy. Deterministic copy is a brand-safe template, not an intelligent interpretation of arbitrary topics or every style/tone; use an LLM for bespoke scripts.
 
-On a Mac without NVIDIA, the controller/UI/editor works, but upstream CUDA generation does not. Supply `UGC_REMOTE_API_URL` and `UGC_REMOTE_API_KEY` pointing at your own worker. The worker has its own provisioned persona and models; the controller does not upload private reference media. Transport private worker traffic over HTTPS or a trusted private network. The controller itself is intended for trusted use, with one process; add deployment authentication and durable queue infrastructure before exposing it publicly.
+On a Mac without NVIDIA, the controller/UI/editor works, but upstream CUDA generation does not. Supply `UGC_REMOTE_API_URL` and `UGC_REMOTE_API_KEY` pointing at your own worker. The worker has its own provisioned persona image and models. The controller sends the exact script and optional prepared TTS audio over authenticated HTTPS; it does not upload persona photos. Transport private worker traffic over HTTPS or a trusted private network. The controller itself is intended for trusted use, with one process; add deployment authentication and durable queue infrastructure before exposing it publicly.
 
 On an NVIDIA worker run `./setup.sh --gpu` to install upstream packages in a separate `.gpu-venv`. Set `UGC_ML_ENV_PYTHON` to that environment's absolute Python path. Upstream requirements are unpinned and broad; dependency resolution and CUDA compatibility need validation on the chosen GPU image. No weights download automatically during setup.
 
@@ -36,9 +36,9 @@ The exact inspected runner is `python examples/run_persona_example.py --persona-
 
 ## Generic remote worker
 
-`remote_worker/Dockerfile` uses an NVIDIA PyTorch CUDA image. Build from this project directory, mount model/project folders and persona media, set the model paths and worker key, and expose port 8091 behind HTTPS. `remote_worker/start.sh` starts the authenticated API. Docker/GPU image installation has not been tested here. Provider-specific RunPod/Vast/Modal/Lambda deployment is intentionally separate from the HTTP contract.
+`remote_worker/Dockerfile` uses an NVIDIA PyTorch CUDA image. Build from this project directory, mount model/project folders and persona media, set the model paths and worker key, and expose port 8091 behind HTTPS. `bash remote_worker/start.sh` starts the authenticated API without requiring executable permissions. Docker/GPU image installation has not been tested here. Provider-specific RunPod/Vast/Modal/Lambda deployment is intentionally separate from the HTTP contract.
 
-Worker API: authenticated `POST /generate`, poll `GET /jobs/{job_id}`, then download `GET /videos/{job_id}`. Use the same nonempty key on worker and controller. No key is required for local script preview. The worker fails closed if its key is missing. Remote jobs currently use the worker's script engine; configure its LLM settings too when needed.
+Worker API: authenticated `POST /generate`, poll `GET /jobs/{job_id}`, then download `GET /videos/{job_id}`. Use the same nonempty key on worker and controller. No key is required for local script preview. The worker fails closed if its key is missing. Remote jobs use the controller-built script, avoiding divergent script regeneration.
 
 ## Editing, captions and brand accuracy
 
@@ -78,3 +78,18 @@ project-review-ugc/
 - **Worker 401/503:** configure matching nonempty remote API keys in each machine's `.env`. Do not paste keys into chat.
 
 Run checks with `.venv/bin/python -m unittest discover -s tests -v`. Editor tests use clearly synthetic color/tone fixtures solely to verify FFmpeg, never as generated UGC footage.
+
+
+## RunPod automatic startup and voice
+
+See [RUNPOD_SETUP.md](RUNPOD_SETUP.md) for the single dashboard bootstrap command. Startup reuses a working .venv Python or falls back to system Python, installing only missing lightweight dependencies into persistent `.worker-deps`. No executable permissions or Git metadata are required. Keep one worker/controller process per directory.
+
+The studio now has persona/voice selection, Manual/Auto GPU mode, Test GPU Connection, stage status, video preview and download. `/setup` shows configuration presence and live authenticated worker status without exposing keys. `/personas`, `POST /gpu/test` and `/gpu/status` power these controls through the controller backend. The browser never contacts RunPod directly.
+
+ElevenLabs is preferred; use `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` and optional `ELEVENLABS_MODEL_ID`. Persona JSON supports `display_name`, `voice_provider`, `voice_id` and `enabled`. Voice output is stored in `outputs/<job_id>/audio/`, normalized to 48 kHz WAV and sent to the worker. Select Persona reference to avoid external TTS or eSpeak for open-source speech (requires `espeak-ng` installed on the controller). Mock audio exists only in the test helper and cannot be selected for real generation.
+
+**Upstream compatibility:** supplied TTS audio replaces the reference voice only in a job-local persona copy. LTX still generates audio/video jointly; this is voice conditioning, not a deterministic ElevenLabs soundtrack or an audio-driven lip-sync model. We do not silently replace generated speech, claim exact TTS sync, or modify upstream. Exact spoken-audio lip sync requires a separately validated audio-driven backend. Upstream QC may keep best-effort segments; review its logs. Captions use approximate timing.
+
+`runpod_manager.py` supports the RunPod REST API for existing Pod status/start/stop, health wait, persistent session deadline, idle stop, maximum-session stop and normal-shutdown stop. API calls are mocked in tests; no actual RunPod lifecycle or paid generation has been tested. No RunPod API key is needed in Manual mode. Auto mode requires explicit UI selection and credentials. The timers depend on a live controller and functioning RunPod API; always inspect billing/Pod status in the dashboard after failures.
+
+Worker `/health` reports hardware and prerequisite presence independently. `generation_ready` stays false because no real GPU run has been certified; `prerequisites_ready` reports static checks only. Model presence cannot establish checkpoint compatibility, adequate VRAM, valid weights or healthy external transcription.

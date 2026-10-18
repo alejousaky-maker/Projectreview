@@ -4,3 +4,4 @@
 jobs
 outputs
 **/__pycache__
+.worker-deps

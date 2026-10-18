@@ -61,7 +61,7 @@ class ControllerTests(unittest.TestCase):
             self.assertIsNone(state['output_video'])
             self.assertIn('--scripts',state['command'])
             self.assertEqual(client.get('/videos/'+state['job_id']).status_code,404)
-            with patch('generate.route',return_value='local_upstream'),patch('upstream_adapter.generate',return_value=Path('/tmp/nonexistent-video.mp4')):
+            with patch('generate.route',return_value='local_upstream'),patch('personas.persona_details',return_value={'status':'ready'}),patch('generate.prepare_voice',return_value={'path':'/tmp/unused.wav','mock':False}),patch('upstream_adapter.generate',return_value=Path('/tmp/nonexistent-video.mp4')):
                 state=self.wait(client,client.post('/generate',json={'topic':'Bakery reviews'}).json()['job_id'])
                 self.assertEqual(state['status'],'failed')
                 self.assertIsNone(state['output_video'])
