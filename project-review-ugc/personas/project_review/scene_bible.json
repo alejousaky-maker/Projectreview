@@ -1,0 +1,22 @@
+{
+  "character_name": "Project Review Creator",
+  "character_description": "The creator in the supplied reference photo",
+  "wardrobe": "casual everyday clothing",
+  "hair": "short dark hair",
+  "distinguishing_features": "",
+  "location": "local business counter",
+  "location_details": "bookshelf and a desk lamp behind the speaker",
+  "lighting": "natural window light",
+  "background": "simple softly lit business interior",
+  "props": [],
+  "camera_angle": "Head-and-shoulders close-up",
+  "camera_movement": "natural handheld phone-camera feel, realistic blinking, small head and hand movements",
+  "framing": "",
+  "voice_description": "close mic",
+  "speaking_pace": "measured pace",
+  "emotional_band": "",
+  "room_tone": "dry room, neutral studio ambience",
+  "target_wps": 2.5,
+  "reference_image": "",
+  "reference_audio": ""
+}

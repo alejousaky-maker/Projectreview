@@ -1,0 +1,23 @@
+# Secrets and local credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+# Python environments and caches
+.venv/
+.gpu-venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+# Local artifacts and large model files
+*.mp4
+*.mov
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+models/
+*.log
+*.tmp
+.DS_Store

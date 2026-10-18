@@ -1,0 +1,7 @@
+{
+  "name": "Project Review Creator",
+  "description": "Casual educational presenter",
+  "face_ref": "reference.jpg",
+  "voice_ref": "reference.wav",
+  "style_prompt": "Natural phone-camera creator, subtle gestures and realistic skin"
+}

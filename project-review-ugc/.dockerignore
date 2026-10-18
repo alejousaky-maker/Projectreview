@@ -1,0 +1,6 @@
+.venv
+.gpu-venv
+.env
+jobs
+outputs
+**/__pycache__

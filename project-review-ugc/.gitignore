@@ -1,0 +1,9 @@
+.venv/
+.gpu-venv/
+.env
+__pycache__/
+outputs/*
+jobs/*
+!outputs/.gitkeep
+!jobs/.gitkeep
+personas/*/reference.*
